@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  minicast:
+    build: .
+    container_name: minicast-server
+    ports:
+      - "554:554"  # RTSP port
+      - "8080:8080"  # Web UI port (future)
+    volumes:
+      - ./streams:/app/streams
+      - ./logs:/app/logs
+      - ./gifs:/app/gifs:ro  # Mount GIFs directory as read-only
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MINICAST_LOG_LEVEL=INFO
+    restart: unless-stopped
+    command: ["python", "server.py", "--input", "/app/streams/default_stream.mp4", "--port", "554"]
+    networks:
+      - minicast-network
+
+  # Optional: VLC client for testing
+  vlc-client:
+    image: jlesage/vlc:latest
+    container_name: minicast-vlc-client
+    ports:
+      - "8081:5800"  # VLC web interface
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      - DISPLAY=${DISPLAY}
+      - VNC_PASSWORD=minicast
+    depends_on:
+      - minicast
+    networks:
+      - minicast-network
+    profiles:
+      - client
+
+networks:
+  minicast-network:
+    driver: bridge
+
+volumes:
+  streams:
+  logs: 
